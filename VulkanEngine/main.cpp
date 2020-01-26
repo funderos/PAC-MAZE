@@ -12,9 +12,11 @@
 
 namespace ve {
 
+	class VEWindow;
+
 
 	uint32_t g_score = 0;				//derzeitiger Punktestand
-	double g_time = 30.0;				//zeit die noch übrig ist
+	double g_time = 15.0;				//zeit die noch übrig ist
 	bool g_gameLost = false;			//true... das Spiel wurde verloren
 	bool g_restart = false;			//true...das Spiel soll neu gestartet werden
 
@@ -30,8 +32,10 @@ namespace ve {
 
 			struct nk_context * ctx = pSubrender->getContext();
 
+			VkExtent2D extent = getEnginePointer()->getWindow()->getExtent();
+
 			if (!g_gameLost) {
-				if (nk_begin(ctx, "", nk_rect(0, 0, 200, 170), NK_WINDOW_BORDER )) {
+				if (nk_begin(ctx, "", nk_rect(extent.width - 200, extent.height - 170, 200, 170), NK_WINDOW_BORDER )) {
 					char outbuffer[100];
 					nk_layout_row_dynamic(ctx, 45, 1);
 					sprintf(outbuffer, "Score: %03d", g_score);
@@ -43,9 +47,9 @@ namespace ve {
 				}
 			}
 			else {
-				if (nk_begin(ctx, "", nk_rect(500, 500, 200, 170), NK_WINDOW_BORDER )) {
+				if (nk_begin(ctx, "", nk_rect(extent.width / 2 - 100, extent.height / 2 - 85, 200, 170), NK_WINDOW_BORDER )) {
 					nk_layout_row_dynamic(ctx, 45, 1);
-					nk_label(ctx, "Game Over", NK_TEXT_LEFT);
+					nk_label(ctx, "Game Over", NK_TEXT_CENTERED);
 					if (nk_button_label(ctx, "Restart")) {
 						g_restart = true;
 					}
@@ -79,7 +83,7 @@ namespace ve {
 			if (g_restart) {
 				g_gameLost = false;
 				g_restart = false;
-				g_time = 30;
+				g_time = 15;
 				g_score = 0;
 				getSceneManagerPointer()->getSceneNode("The Cube Parent")->setPosition(glm::vec3(d(e), 1.0f, d(e)));
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/ophelia.mp3", true);
@@ -94,8 +98,8 @@ namespace ve {
 			if (distance < 1) {
 				g_score++;
 				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/explosion.wav", false);
-				if (g_score % 10 == 0) {
-					g_time = 30;
+				if (g_score % 5 == 0) {
+					g_time = 15;
 					getEnginePointer()->m_irrklangEngine->play2D("media/sounds/bell.wav", false);
 				}
 
@@ -185,11 +189,11 @@ int main() {
 
 	bool debug = true;
 
-	MyVulkanEngine mve(debug);	//enable or disable debugging (=callback, validation layers)
+	PacEngine pe(debug);	//enable or disable debugging (=callback, validation layers)
 
-	mve.initEngine();
-	mve.loadLevel(1);
-	mve.run();
+	pe.initEngine();
+	pe.loadLevel(1);
+	pe.run();
 
 	return 0;
 }

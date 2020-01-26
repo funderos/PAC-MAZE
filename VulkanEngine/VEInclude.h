@@ -33,6 +33,10 @@
 #include "VERenderer.h"
 #include "VERendererForward.h"
 
+#include "PacEngine.h"
+#include "PacEventListener.h"
+#include "Tile.h"
+
 
 //use this macro to check the function result, if its not VK_SUCCESS then return the error
 #define VECHECKRESULT(x) { \

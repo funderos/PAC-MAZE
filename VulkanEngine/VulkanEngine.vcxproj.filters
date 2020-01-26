@@ -33,6 +33,12 @@
     <Filter Include="Header Files\VHelper">
       <UniqueIdentifier>{6a52e981-61c4-42e0-aadb-431516ce8e9d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Pacmaze">
+      <UniqueIdentifier>{7398eae7-02d6-4ff6-af72-240abdc0c36a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Pacmaze">
+      <UniqueIdentifier>{d0374a74-de9b-4ae1-94b8-5d0a6970b373}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="VEEngine.h">
@@ -118,6 +124,15 @@
     </ClInclude>
     <ClInclude Include="VHFunctions.h">
       <Filter>Header Files\VHelper</Filter>
+    </ClInclude>
+    <ClInclude Include="Tile.h">
+      <Filter>Header Files\Pacmaze</Filter>
+    </ClInclude>
+    <ClInclude Include="PacEngine.h">
+      <Filter>Header Files\Pacmaze</Filter>
+    </ClInclude>
+    <ClInclude Include="PacEventListener.h">
+      <Filter>Header Files\Pacmaze</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -223,10 +238,20 @@
     <ClCompile Include="VHFunctions.cpp">
       <Filter>Source Files\VHelper</Filter>
     </ClCompile>
+    <ClCompile Include="PacEngine.cpp">
+      <Filter>Source Files\Pacmaze</Filter>
+    </ClCompile>
+    <ClCompile Include="Tile.cpp">
+      <Filter>Source Files\Pacmaze</Filter>
+    </ClCompile>
+    <ClCompile Include="PacEventListener.cpp">
+      <Filter>Source Files\Pacmaze</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="VHFunctions.inl">
       <Filter>Header Files\VHelper</Filter>
     </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>

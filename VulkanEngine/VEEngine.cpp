@@ -619,9 +619,9 @@ namespace ve {
 
 		//use one light source
 		VELight *light1 = (VEDirectionalLight *)getSceneManagerPointer()->createLight("StandardDirLight", VELight::VE_LIGHT_TYPE_DIRECTIONAL, getRoot());     //new VEDirectionalLight("StandardDirLight");
-		light1->lookAt(glm::vec3(0.0f, 20.0f, -20.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		light1->m_col_diffuse = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f);
-		light1->m_col_specular = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
+		light1->lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 20.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		light1->m_col_diffuse = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+		light1->m_col_specular = glm::vec4(0.1f, 0.1f, 0.1f, 1.0f);
 		
 		/*VELight *light3 = (VEPointLight *)getSceneManagerPointer()->createLight("StandardPointLight", VELight::VE_LIGHT_TYPE_POINT, camera); //new VEPointLight("StandardPointLight");		//sphere is attached to this!
 		light3->m_col_diffuse = glm::vec4(0.99f, 0.99f, 0.6f, 1.0f);
