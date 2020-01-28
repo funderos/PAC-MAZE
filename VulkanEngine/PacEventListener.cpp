@@ -6,9 +6,13 @@ namespace ve {
 	float enemySpeed = 30.0f;
 
 	VESceneNode* pScene;
+	VECamera* pCamera;
+	VESceneNode* pParent;
 	VESceneNode* maze;
 	VESceneNode* pills;
-	VESceneNode* enemy;
+	VESceneNode* movable;
+	VESceneNode* cat;
+
 	const int pgWidth = 17;
 	const int pgHeight = 22;
 
@@ -42,12 +46,14 @@ namespace ve {
 	int fillX[2]{ 0, pgWidth - 1 };
 	int fillY[2]{ 0, pgHeight - 1 };
 
-	double enDir[4]{ 0, M_PI / 2, M_PI, M_PI * 3 / 2 };
-	enum headingDirection { STRAIGHT = 0, LEFT = -1, RIGHT = 1 };
-	headingDirection headDir[4]{ STRAIGHT, STRAIGHT, STRAIGHT, STRAIGHT };
+	double enDir[5]{ M_PI / 2, 0, M_PI / 2, M_PI, M_PI * 3 / 2 };
+	enum headingDirection { STRAIGHT = 0, LEFT = -1, RIGHT = 1, STOP = -2, JUMP = 2 };
+	headingDirection headDir[5]{ STRAIGHT, STRAIGHT, STRAIGHT, STRAIGHT, STRAIGHT };
 
 	void PacEventListener::initWorld() {
 		pScene = getSceneManagerPointer()->getSceneNode("Level 1");
+		pCamera = getSceneManagerPointer()->getCamera();
+		pParent = pCamera->getParent();
 
 		maze = getSceneManagerPointer()->createSceneNode("The Grid Parent", pScene, glm::mat4(1.0));
 		maze->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)));
@@ -57,9 +63,9 @@ namespace ve {
 		pills->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)));
 		pills->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f)));
 
-		enemy = getSceneManagerPointer()->createSceneNode("The Enemy Parent", pScene, glm::mat4(1.0));
-		enemy->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)));
-		enemy->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f)));
+		movable = getSceneManagerPointer()->createSceneNode("The Movable Parent", pScene, glm::mat4(1.0));
+		movable->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)));
+		movable->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f)));
 
 		for (int x = 1; x < pgWidth - 1; x++) {
 			for (int y = 1; y < pgHeight - 1; y++) {
@@ -103,33 +109,33 @@ namespace ve {
 			}
 		}
 
+		VECHECKPOINTER(cat = getSceneManagerPointer()->loadModel("Cat", "media/models/pacmaze/characters", "Mimi.obj"));
+		cat->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(8 * 32.0f, 0.5f, 5 * 32.0f)));
+		movable->addChild(cat);
+		cat->addChild(pCamera);
+
+		pCamera->multiplyTransform(glm::rotate((float)M_PI / 6, glm::vec3(1.0f, 0.0f, 0.0f)));
+		pCamera->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 5.5f, -6.0f)));
+
 		VESceneNode* pinky;
 		VECHECKPOINTER(pinky = getSceneManagerPointer()->loadModel("Pinky", "media/models/pacmaze/characters", "pinky.obj"));
-		pinky->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.8f, 0.8f, 0.8f)));
-		//pinky->multiplyTransform(glm::rotate((float)M_PI * 3 / 2, glm::vec3(0.0f, 1.0f, 0.0f)));
 		pinky->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(8 * 32.0f, 0.0f, 11 * 32.0f)));
-		enemy->addChild(pinky);
+		movable->addChild(pinky);
 
 		VESceneNode* blinky;
 		VECHECKPOINTER(blinky = getSceneManagerPointer()->loadModel("Blinky", "media/models/pacmaze/characters", "blinky.obj"));
-		blinky->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.8f, 0.8f, 0.8f)));
-		//blinky->multiplyTransform(glm::rotate((float)M_PI / 2, glm::vec3(0.0f, 1.0f, 0.0f)));
 		blinky->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(8 * 32.0f, 0.0f, 11 * 32.0f)));
-		enemy->addChild(blinky);
+		movable->addChild(blinky);
 
 		VESceneNode* inky;
 		VECHECKPOINTER(inky = getSceneManagerPointer()->loadModel("Inky", "media/models/pacmaze/characters", "inky.obj"));
-		inky->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.8f, 0.8f, 0.8f)));
-		//inky->multiplyTransform(glm::rotate((float)M_PI * 3 / 2, glm::vec3(0.0f, 1.0f, 0.0f)));
 		inky->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(8 * 32.0f, 0.0f, 11 * 32.0f)));
-		enemy->addChild(inky);
+		movable->addChild(inky);
 
 		VESceneNode* clyde;
 		VECHECKPOINTER(clyde = getSceneManagerPointer()->loadModel("Clyde", "media/models/pacmaze/characters", "clyde.obj"));
-		clyde->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.8f, 0.8f, 0.8f)));
-		//clyde->multiplyTransform(glm::rotate((float)M_PI, glm::vec3(0.0f, 1.0f, 0.0f)));
 		clyde->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(8 * 32.0f, 0.0f, 11 * 32.0f)));
-		enemy->addChild(clyde);
+		movable->addChild(clyde);
 
 		initLevel();
 	}
@@ -176,7 +182,7 @@ namespace ve {
 						VECHECKPOINTER(pill = getSceneManagerPointer()->loadModel("Pill-" + std::to_string(x) + "-"
 							+ std::to_string(y) + "Y", "media/models/pacmaze/elements", "pill.obj"));
 						pill->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 2.0f)));
-						pill->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(x * 32.0f, 0.5f, y * 32.0f + 16.0f)));
+						pill->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(x * 32.0f, 1.5f, y * 32.0f + 16.0f)));
 						pills->addChild(pill);
 					}
 					if (pellets[x + 1][y] > 0) {
@@ -184,23 +190,26 @@ namespace ve {
 						VECHECKPOINTER(pill = getSceneManagerPointer()->loadModel("Pill-" + std::to_string(x) + "-"
 							+ std::to_string(y) + "X", "media/models/pacmaze/elements", "pill.obj"));
 						pill->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 2.0f)));
-						pill->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(x * 32.0f + 16.0f, 0.5f, y * 32.0f)));
+						pill->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(x * 32.0f + 16.0f, 1.5f, y * 32.0f)));
 						pills->addChild(pill);
 					}
 					std::string mesh;
+					std::string name;
 
 					if (pellets[x][y] == 1) {
+						name = "Pill-";
 						mesh = "pill.obj";
 					}
 					else {
+						name = "Yarn-";
 						mesh = "yarn.obj";
 					}
 
 					VESceneNode* pill;
-					VECHECKPOINTER(pill = getSceneManagerPointer()->loadModel("Pill-" + std::to_string(x) + "-"
+					VECHECKPOINTER(pill = getSceneManagerPointer()->loadModel(name + std::to_string(x) + "-"
 						+ std::to_string(y), "media/models/pacmaze/elements", mesh));
 					pill->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 2.0f, 2.0f)));
-					pill->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(x * 32.0f, 0.5f, y * 32.0f)));
+					pill->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(x * 32.0f, 1.5f, y * 32.0f)));
 					pills->addChild(pill);
 				}
 			}
@@ -212,84 +221,18 @@ namespace ve {
 			getEnginePointer()->end();
 			return true;
 		}
-
-		if (event.idata3 == GLFW_RELEASE) return false;
-
-		if (event.idata1 == GLFW_KEY_P && event.idata3 == GLFW_PRESS) {
-			m_makeScreenshot = true;
+		if (event.idata3 == GLFW_RELEASE) {
+			buttonDirection = 0;
+		}
+			
+		if (event.idata1 == GLFW_KEY_LEFT && event.idata3 == GLFW_PRESS) {
+			buttonDirection = -1;
 			return false;
 		}
-		if (event.idata1 == GLFW_KEY_O && event.idata3 == GLFW_PRESS) {
-			m_makeScreenshotDepth = true;
+		if (event.idata1 == GLFW_KEY_RIGHT && event.idata3 == GLFW_PRESS) {
+			buttonDirection = 1;
 			return false;
 		}
-
-		///create some default constants for the actions 
-		glm::vec4 translate = glm::vec4(0.0, 0.0, 0.0, 1.0);	//total translation
-		glm::vec4 rot4 = glm::vec4(1.0);						//total rotation around the axes, is 4d !
-		float angle = 0.0;
-		float rotSpeed = 2.0;
-
-		VECamera* pCamera = getSceneManagerPointer()->getCamera();
-		VESceneNode* pParent = pCamera->getParent();
-
-		switch (event.idata1) {
-		case GLFW_KEY_A:
-			translate = pCamera->getTransform() * glm::vec4(-1.0, 0.0, 0.0, 1.0);	//left
-			break;
-		case GLFW_KEY_D:
-			translate = pCamera->getTransform() * glm::vec4(1.0, 0.0, 0.0, 1.0); //right
-			break;
-		case GLFW_KEY_W:
-			translate = pCamera->getTransform() * glm::vec4(0.0, 0.0, 1.0, 1.0); //forward
-			translate.y = 0.0f;
-			break;
-		case GLFW_KEY_S:
-			translate = pCamera->getTransform() * glm::vec4(0.0, 0.0, -1.0, 1.0); //back
-			translate.y = 0.0f;
-			break;
-		case GLFW_KEY_Q:
-			translate = glm::vec4(0.0, -1.0, 0.0, 1.0); //down
-			break;
-		case GLFW_KEY_E:
-			translate = glm::vec4(0.0, 1.0, 0.0, 1.0);  //up
-			break;
-		case GLFW_KEY_LEFT:							//yaw rotation is already in parent space
-			angle = rotSpeed * (float)event.dt * -1.0f;
-			rot4 = glm::vec4(0.0, 1.0, 0.0, 1.0);
-			break;
-		case GLFW_KEY_RIGHT:						//yaw rotation is already in parent space
-			angle = rotSpeed * (float)event.dt * 1.0f;
-			rot4 = glm::vec4(0.0, 1.0, 0.0, 1.0);
-			break;
-		case GLFW_KEY_UP:							//pitch rotation is in cam/local space
-			angle = rotSpeed * (float)event.dt * 1.0f;			//pitch angle
-			rot4 = pCamera->getTransform() * glm::vec4(1.0, 0.0, 0.0, 1.0); //x axis from local to parent space!
-			break;
-		case GLFW_KEY_DOWN:							//pitch rotation is in cam/local space
-			angle = rotSpeed * (float)event.dt * -1.0f;		//pitch angle
-			rot4 = pCamera->getTransform() * glm::vec4(1.0, 0.0, 0.0, 1.0); //x axis from local to parent space!
-			break;
-
-		default:
-			return false;
-		};
-
-		if (pParent == nullptr) {
-			pParent = pCamera;
-		}
-
-		///add the new translation vector to the previous one
-		float speed = 6.0f;
-		glm::vec3 trans = speed * glm::vec3(translate.x, translate.y, translate.z);
-		pParent->multiplyTransform(glm::translate(glm::mat4(1.0f), (float)event.dt * trans));
-
-		///combination of yaw and pitch, both wrt to parent space
-		glm::vec3  rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
-		glm::mat4  rotate = glm::rotate(glm::mat4(1.0), angle, rot3);
-		pCamera->multiplyTransform(rotate);
-
-		return true;
 	}
 
 	/**
@@ -412,8 +355,13 @@ namespace ve {
 
 	void PacEventListener::onFrameStarted(veEvent event) {
 		int i = 0;
-		for (VESceneNode* en : enemy->getChildrenList()) {
-			glm::vec3 curPos = en->getPosition();
+		/*
+		for (int i = 1; i < sizeof movable; i++) {
+			VESceneNode* mv = movable[i];
+			*/
+
+		for (VESceneNode* mv : movable->getChildrenList()) {
+			glm::vec3 curPos = mv->getPosition();
 
 			double factor = enemySpeed * event.dt;
 			bool decision = false;
@@ -432,11 +380,11 @@ namespace ve {
 					decision = true;
 				}
 			}
-			else {
+			else if (headDir[i] != STOP) {
 				if (cos(enDir[i] + factor * headDir[i] / 16) * cos(enDir[i]) < 0
 					|| sin(enDir[i] + factor * headDir[i] / 16) * sin(enDir[i]) < 0) {
 					double roundedAngle;
-					std::cout << "bf:" << curPos.x / 32 << " " << curPos.z / 32 << std::endl;
+
 					if (cos(enDir[i]) > 0.72) {
 						curPos.z = (((int)(curPos.z + 8) / 32) + .5) * 32;
 						curPos.x = ((int)(curPos.x + 16) / 32) * 32;
@@ -457,7 +405,6 @@ namespace ve {
 						curPos.z = ((int)(curPos.z + 16) / 32) * 32;
 						roundedAngle = M_PI * 3 / 2;
 					}
-					std::cout << "af:" << curPos.x / 32 << " " << curPos.z / 32 << " " << roundedAngle << std::endl;
 
 					while (enDir[i] > 2 * M_PI)
 						enDir[i] = enDir[i] - 2 * M_PI;
@@ -473,21 +420,58 @@ namespace ve {
 					enDir[i] = enDir[i] + factor * headDir[i] / 16;
 				}
 			}
+			else {
+				decision = true;
+			}
 
 			if (decision) {
 				if (factor < 0)
 					factor = factor * -1;
+				if (factor == 0)
+					factor = 0.001;
 
-				headDir[i] = headingDirection(getDirection(curPos.x + 0.5, curPos.z + 0.5, enDir[i]));
+				headDir[i] = headingDirection(getDirection(curPos.x + 0.5, curPos.z + 0.5, enDir[i], i));
+				switch (headDir[i]) {
+				case STOP: factor = 0; break;
+				case JUMP: curPos.x = curPos.x - 13 * 32 * sin(enDir[i]); headDir[i] = STRAIGHT; break;
+				}
 				enDir[i] = enDir[i] + factor * headDir[i] / 16;
+
 			}
 
 			curPos.x = curPos.x + factor * sin(enDir[i]);
 			curPos.z = curPos.z + factor * cos(enDir[i]);
 
-			en->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.8f, 0.8f, 0.8f)));
-			en->multiplyTransform(glm::rotate((float)enDir[i], glm::vec3(0.0f, 1.0f, 0.0f)));
-			en->multiplyTransform(glm::translate(glm::mat4(1.0f), curPos));
+
+
+			if (i) { // enemies
+				mv->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.8f, 0.8f, 0.8f)));
+				mv->multiplyTransform(glm::rotate((float)enDir[i], glm::vec3(0.0f, 1.0f, 0.0f)));
+				mv->multiplyTransform(glm::translate(glm::mat4(1.0f), curPos));
+
+				glm::vec3 catPos = cat->getPosition();
+
+				if (std::abs(catPos.x - curPos.x) < 15 && std::abs(catPos.z - curPos.z) < 15)
+					std::cout << "Collision with " << i;
+			}
+			else { // cat
+				mv->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(8.0f, 8.0f, 8.0f)));
+				mv->multiplyTransform(glm::rotate((float)enDir[i], glm::vec3(0.0f, 1.0f, 0.0f)));
+				mv->multiplyTransform(glm::translate(glm::mat4(1.0f), curPos));
+
+				for (VESceneNode* pill : pills->getChildrenList()) {
+					glm::vec3 pillPos = pill->getPosition();
+					if (std::abs(pillPos.x - curPos.x) < 11 && std::abs(pillPos.z - curPos.z) < 11) {
+						if (pillPos.y < 0)
+							break;
+						if (pill->getName().rfind("Yarn", 0) == 0) {
+							std::cout << "Got Yarn!";
+						}
+						pill->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -10.0f, 0.0f)));
+						break;
+					}
+				}				
+			}
 
 			i++;
 		}
@@ -565,7 +549,7 @@ namespace ve {
 		}
 	}
 
-	int PacEventListener::getDirection(int x, int y, double angle) {
+	int PacEventListener::getDirection(int x, int y, double angle, bool enemy) {
 
 		bool dir[]{ false, false, false };
 
@@ -581,9 +565,11 @@ namespace ve {
 						dir[1] = true;
 				}
 				else {
-					if (grid[x / 32 - 1][(y + 16) / 32] == SPACE && grid[x / 32 - 3][(y + 16) / 32] != TELEPORT)
+					if (grid[x / 32 - 1][(y + 16) / 32] == SPACE && (x / 32 - 3 < 0
+						|| grid[x / 32 - 3][(y + 16) / 32] != TELEPORT || !enemy))
 						dir[0] = true;
-					if (grid[x / 32 + 1][(y + 16) / 32] == SPACE && grid[x / 32 + 3][(y + 16) / 32] != TELEPORT)
+					if (grid[x / 32 + 1][(y + 16) / 32] == SPACE && (x / 32 + 3 > pgWidth
+						|| grid[x / 32 + 3][(y + 16) / 32] != TELEPORT || !enemy))
 						dir[2] = true;
 					if (grid[x / 32][(y + 48) / 32] == SPACE)
 						dir[1] = true;
@@ -599,9 +585,11 @@ namespace ve {
 						dir[1] = true;
 				}
 				else {
-					if (grid[x / 32 - 1][(y - 16) / 32] == SPACE && grid[x / 32 - 3][(y - 16) / 32] != TELEPORT)
+					if (grid[x / 32 - 1][(y - 16) / 32] == SPACE && (x / 32 - 3 < 0
+						|| grid[x / 32 - 3][(y - 16) / 32] != TELEPORT || !enemy))
 						dir[2] = true;
-					if (grid[x / 32 + 1][(y - 16) / 32] == SPACE && grid[x / 32 + 3][(y - 16) / 32] != TELEPORT)
+					if (grid[x / 32 + 1][(y - 16) / 32] == SPACE && (x / 32 + 3 > pgWidth - 1
+						|| grid[x / 32 + 3][(y - 16) / 32] != TELEPORT || !enemy))
 						dir[0] = true;
 					if (grid[x / 32][(y - 48) / 32] == SPACE)
 						dir[1] = true;
@@ -619,12 +607,16 @@ namespace ve {
 						|| (dir[2] && dir[1] && grid[(x + 16) / 32][y / 32 + 1] == SPACE))
 						dir[0] = true;
 				}
+				else if (!enemy && grid[(x + 16) / 32][y / 32] == TELEPORT) {
+					return 2;
+				}
 				else {
 					if (grid[(x + 16) / 32][y / 32 + 1] == SPACE)
 						dir[0] = true;
 					if (grid[(x + 16) / 32][y / 32 - 1] == SPACE)
 						dir[2] = true;
-					if (grid[(x + 48) / 32][y / 32] == SPACE && grid[(x + 112) / 32][y / 32] != TELEPORT)
+					if (grid[(x + 48) / 32][y / 32] == TELEPORT || (grid[(x + 48) / 32][y / 32] == SPACE
+						&& ((x + 112) / 32 > pgWidth - 1 || grid[(x + 112) / 32][y / 32] != TELEPORT || !enemy)))
 						dir[1] = true;
 				}
 			}
@@ -638,22 +630,37 @@ namespace ve {
 						|| (dir[0] && dir[1] && grid[(x - 16) / 32][y / 32 + 1] == SPACE))
 						dir[2] = true;
 				}
+				else if (!enemy && grid[(x - 16) / 32][y / 32] == TELEPORT) {
+					return 2;
+				}
 				else {
 					if (grid[(x - 16) / 32][y / 32 + 1] == SPACE)
 						dir[2] = true;
 					if (grid[(x - 16) / 32][y / 32 - 1] == SPACE)
 						dir[0] = true;
-					if (grid[(x - 48) / 32][y / 32] == SPACE && grid[(x + 112) / 32][y / 32] != TELEPORT)
+					if (grid[(x - 48) / 32][y / 32] == TELEPORT || grid[(x - 48) / 32][y / 32] == SPACE 
+						&& ((x - 112) / 32 < 0 || grid[(x - 112) / 32][y / 32] != TELEPORT || !enemy))
 						dir[1] = true;
 				}
 
 			}
 		}
 
+		if (!enemy) {
+			if (buttonDirection == -1 && dir[0])
+				return -1;
+			if (buttonDirection == 1 && dir[2])
+				return 1;
+			if (dir[1])
+				return 0;
+			if (dir[0] == dir[2])
+				return -2;
+		}
+
 		int d = rand() % 3;
 
 		while (!dir[d])
-			d = (d+1) % 3;
+			d = (d + 1) % 3;
 		return d - 1;
 	}
 

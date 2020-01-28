@@ -21,7 +21,7 @@ namespace ve {
 		VkExtent2D extent = getWindowPointer()->getExtent();
 		VECameraProjective* camera = (VECameraProjective*)getSceneManagerPointer()->createCamera("StandardCamera", VECamera::VE_CAMERA_TYPE_PROJECTIVE, cameraParent);
 		camera->m_nearPlane = 0.1f;
-		camera->m_farPlane = 500.1f;
+		camera->m_farPlane = 300.1f;
 		camera->m_aspectRatio = extent.width / (float)extent.height;
 		camera->m_fov = 45.0f;
 		camera->lookAt(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -41,11 +41,6 @@ namespace ve {
 
 		//scene models
 
-		VESceneNode* sp1;
-		VECHECKPOINTER(sp1 = getSceneManagerPointer()->createSkybox("The Sky", "media/models/test/sky/cloudy",
-			{ "bluecloud_ft.jpg", "bluecloud_bk.jpg", "bluecloud_up.jpg",
-				"bluecloud_dn.jpg", "bluecloud_rt.jpg", "bluecloud_lf.jpg" }, pScene));
-
 		VESceneNode* e4;
 		VECHECKPOINTER(e4 = getSceneManagerPointer()->loadModel("The Plane", "media/models/test", "plane_t_n_s.obj", 0, pScene));
 		e4->setTransform(glm::scale(glm::mat4(1.0f), glm::vec3(1000.0f, 1.0f, 1000.0f)));
@@ -60,28 +55,22 @@ namespace ve {
 		playable->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)));
 		playable->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f)));
 
-		VESceneNode* cat;
-		VECHECKPOINTER(cat = getSceneManagerPointer()->loadModel("Cat",	"media/models/pacmaze/characters", "Mimi.obj"));
-		cat->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(8.0f, 8.0f, 8.0f)));
-		cat->multiplyTransform(glm::rotate((float)M_PI / 2, glm::vec3(0.0f, 1.0f, 0.0f)));
-		cat->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(8 * 32.0f, 0.5f, 5 * 32.0f)));
-		playable->addChild(cat);
-
 		VECamera* pCamera = getSceneManagerPointer()->getCamera();
 		VESceneNode* pParent = pCamera->getParent();
 
 		glm::vec4 translate = glm::vec4(0.0, 0.0, 0.0, 1.0);	//total translation
 		glm::vec4 rot4 = glm::vec4(1.0);						//total rotation around the axes, is 4d !
 		
-
-		translate = pCamera->getTransform() * glm::vec4(8.0, 0.0, 3.25, 1.0);
+		/*
+		translate = pCamera->getTransform() * glm::vec4(8.0 * 3.2, 0.0, 10.0 * 3.2, 1.0);
 		glm::vec3 trans = glm::vec3(translate.x, translate.y, translate.z);
-		pParent->multiplyTransform(glm::translate(glm::mat4(1.0f), trans));
+		pParent->setTransform(glm::translate(glm::mat4(1.0f), trans));
 
 		translate = glm::vec4(0.0, 2.0, 0.0, 1.0);
 		trans = glm::vec3(translate.x, translate.y, translate.z);
 		pParent->multiplyTransform(glm::translate(glm::mat4(1.0f), trans));
 
+		
 		rot4 = pCamera->getTransform() * glm::vec4(1.0, 0.0, 0.0, 1.0); //x axis from local to parent space!
 		///combination of yaw and pitch, both wrt to parent space
 		glm::vec3  rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
@@ -93,6 +82,7 @@ namespace ve {
 		rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
 		rotate = glm::rotate(glm::mat4(1.0), (float)M_PI / 2, rot3);
 		pCamera->multiplyTransform(rotate);
+		*/
 
 		//getSceneManagerPointer()->getSceneNode("StandardCameraParent")->setTransform(cat->getTransform());
 

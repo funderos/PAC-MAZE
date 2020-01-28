@@ -12,6 +12,7 @@ namespace ve {
 		bool  m_makeScreenshotDepth = false;			///<Should I make a screeshot after frame is done?
 		uint32_t m_numScreenshot = 0;					///<Screenshot ID		
 		
+		int buttonDirection = 0;
 
 		virtual void onFrameEnded(veEvent event);
 		virtual void onFrameStarted(veEvent event);
@@ -22,7 +23,7 @@ namespace ve {
 
 		virtual void initWorld();
 		virtual void initLevel();
-		virtual int getDirection(int x, int y, double angle);
+		virtual int getDirection(int x, int y, double angle, bool enemy);
 		virtual int getOpenWays(int x, int y);
 		virtual std::string getMeshName(int x, int y);
 		virtual float getMeshRotation(int x, int y);
