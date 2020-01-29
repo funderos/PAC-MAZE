@@ -4,25 +4,30 @@
 namespace ve {
 	class PacEventListener : public VEEventListener {
 	protected:
-		bool  m_usePrevCursorPosition = false;			///<Can I use the previous cursor position for moving the camera?
-		bool  m_rightButtonClicked = false;				///<Is the left button currently clicked?
-		float m_cursorPrevX = 0;						///<Previous X position of cursor
-		float m_cursorPrevY = 0;						///<Previous Y position of cursor
-		bool  m_makeScreenshot = false;					///<Should I make a screeshot after frame is done?
-		bool  m_makeScreenshotDepth = false;			///<Should I make a screeshot after frame is done?
-		uint32_t m_numScreenshot = 0;					///<Screenshot ID		
-		
-		int buttonDirection = 0;
+		float speed = 50.0f;
+		float rageTime = 0.0f;
+		float cageTime = 10.0f;
+		float playTime = 0.0f;
 
-		virtual void onFrameEnded(veEvent event);
+		int buttonDirection = 0;
+		int mode = 1;
+		//bool paused = true;
+		//bool intro = false;
+		//bool gameOver = false;
+		//bool startscreen = false;
+		int lives = 2;
+		int level = 1;
+		int pillScore;
+		int enemyScore;
+		int rageScore = 0;
+
 		virtual void onFrameStarted(veEvent event);
 		virtual bool onKeyboard(veEvent event);
-		virtual bool onMouseMove(veEvent event);
-		virtual bool onMouseButton(veEvent event);
 		virtual bool onMouseScroll(veEvent event);
+		virtual void onDrawOverlay(veEvent event);
 
 		virtual void initWorld();
-		virtual void initLevel();
+		virtual void initLevel(bool pillRestore);
 		virtual int getDirection(int x, int y, double angle, bool enemy);
 		virtual int getOpenWays(int x, int y);
 		virtual std::string getMeshName(int x, int y);

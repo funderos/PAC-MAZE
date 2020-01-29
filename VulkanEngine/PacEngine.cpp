@@ -50,39 +50,33 @@ namespace ve {
 		pE4->setParam(glm::vec4(1000.0f, 1000.0f, 0.0f, 0.0f));
 		
 
-		VESceneNode* playable;
-		playable = getSceneManagerPointer()->createSceneNode("The Cat Parent", pScene, glm::mat4(1.0));
-		playable->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)));
-		playable->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f)));
+		VESceneNode* e1, * eParent;
+		eParent = getSceneManagerPointer()->createSceneNode("The Logo Parent", pScene, glm::mat4(1.0));
+		VECHECKPOINTER(e1 = getSceneManagerPointer()->loadModel("The Logo", "media/models/pacmaze/static", "logo.obj"));
+		eParent->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.05, 0.05, 0.05)));
+		eParent->multiplyTransform(glm::rotate((float)M_PI / 2, glm::vec3(1.0, 0.0, 0.0)));
+		eParent->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(8.0 * 3.2, 80.0, 12.0 * 3.2)));
+		eParent->addChild(e1);
 
 		VECamera* pCamera = getSceneManagerPointer()->getCamera();
 		VESceneNode* pParent = pCamera->getParent();
 
 		glm::vec4 translate = glm::vec4(0.0, 0.0, 0.0, 1.0);	//total translation
 		glm::vec4 rot4 = glm::vec4(1.0);						//total rotation around the axes, is 4d !
-		
-		/*
-		translate = pCamera->getTransform() * glm::vec4(8.0 * 3.2, 0.0, 10.0 * 3.2, 1.0);
+
+		translate = pCamera->getTransform() * glm::vec4(8.0 * 3.2, 0.0, 11.0 * 3.2, 1.0);
 		glm::vec3 trans = glm::vec3(translate.x, translate.y, translate.z);
 		pParent->setTransform(glm::translate(glm::mat4(1.0f), trans));
 
-		translate = glm::vec4(0.0, 2.0, 0.0, 1.0);
+		translate = glm::vec4(0.0, 100.0, 0.0, 1.0);
 		trans = glm::vec3(translate.x, translate.y, translate.z);
 		pParent->multiplyTransform(glm::translate(glm::mat4(1.0f), trans));
-
 		
 		rot4 = pCamera->getTransform() * glm::vec4(1.0, 0.0, 0.0, 1.0); //x axis from local to parent space!
 		///combination of yaw and pitch, both wrt to parent space
 		glm::vec3  rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
-		glm::mat4  rotate = glm::rotate(glm::mat4(1.0), (float)M_PI/8, rot3);
+		glm::mat4  rotate = glm::rotate(glm::mat4(1.0), (float)M_PI/2, rot3);
 		pCamera->multiplyTransform(rotate);
-
-		rot4 = glm::vec4(0.0, 1.0, 0.0, 1.0);
-		///combination of yaw and pitch, both wrt to parent space
-		rot3 = glm::vec3(rot4.x, rot4.y, rot4.z);
-		rotate = glm::rotate(glm::mat4(1.0), (float)M_PI / 2, rot3);
-		pCamera->multiplyTransform(rotate);
-		*/
 
 		//getSceneManagerPointer()->getSceneNode("StandardCameraParent")->setTransform(cat->getTransform());
 
@@ -105,8 +99,6 @@ namespace ve {
 			//registerEventListener( new BlinkListener("BlinkListener" + std::to_string(i), e2, dur(e) ), { veEvent::VE_EVENT_FRAME_STARTED, veEvent::VE_EVENT_DELETE_NODE });
 		}
 		*/
-
-		m_irrklangEngine->play2D("media/sounds/ophelia.mp3", true);
 
 		registerEventListeners();
 	}
