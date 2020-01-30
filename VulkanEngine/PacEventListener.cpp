@@ -6,6 +6,7 @@ namespace ve {
 	VESceneNode* pills;
 	VESceneNode* movable;
 	VESceneNode* cat;
+	VESceneNode* pCamera;
 
 	const int pgWidth = 17;
 	const int pgHeight = 22;
@@ -60,15 +61,18 @@ namespace ve {
 	int fillY[2]{ 0, pgHeight - 1 };
 
 	double enDir[5];
+	double cameraAngle;
 	enum headingDirection { STRAIGHT = 0, LEFT = -1, RIGHT = 1, STOP = -2, JUMP = 2 };
 	headingDirection headDir[5];
 
 	void PacEventListener::initWorld() {
 		pillScore = 0;
 		enemyScore = 0;
+		lives = 2;
+		level = 1;
 
 		VESceneNode* pScene = getSceneManagerPointer()->getSceneNode("Level 1");
-		VESceneNode* pCamera = getSceneManagerPointer()->getCamera();
+		pCamera = getSceneManagerPointer()->getCamera();
 
 		VESceneNode* maze = getSceneManagerPointer()->createSceneNode("The Grid Parent", pScene, glm::mat4(1.0));
 		maze->multiplyTransform(glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f)));
@@ -126,10 +130,6 @@ namespace ve {
 
 		VECHECKPOINTER(cat = getSceneManagerPointer()->loadModel("Cat", "media/models/pacmaze/characters", "Mimi.obj"));
 		movable->addChild(cat);
-		//cat->addChild(pCamera);
-		//pCamera->multiplyTransform(glm::rotate((float)M_PI / 6, glm::vec3(1.0f, 0.0f, 0.0f)));
-		//pCamera->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 7.0f, -8.0f)));
-
 
 		VESceneNode* pinky;
 		VECHECKPOINTER(pinky = getSceneManagerPointer()->loadModel("Pinky", "media/models/pacmaze/characters", "pinky.obj"));
@@ -238,6 +238,14 @@ namespace ve {
 		while (getEnginePointer()->m_irrklangEngine->isCurrentlyPlaying("media/sounds/pacmaze/death_1.wav")) {};
 		double angle = 0;
 		int i = 0;
+
+		
+		//pCamera->setTransform(glm::rotate((float)M_PI / 2, glm::vec3(0.0f, 1.0f, 0.0f)));
+		pCamera->setTransform(glm::rotate((float)M_PI / 6, glm::vec3(1.0f, 0.0f, 0.0f)));
+		pCamera->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 7.0f, -8.0f)));
+		//pCamera->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 100.0f, 0.0f)));
+
+
 		for (VESceneNode* mv : movable->getChildrenList()) {
 			headDir[i] = STRAIGHT;
 			if (i) {
@@ -261,8 +269,9 @@ namespace ve {
 				pill->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(pos.x, 1.5f, pos.z)));
 			}
 		}
-		getEnginePointer()->m_irrklangEngine->play2D("media/sounds/pacmaze/game_start.wav", false);
-		mode = 1;
+		
+		cameraAngle = 0;
+		mode = -2;
 	}
 
 	bool PacEventListener::onKeyboard(veEvent event) {
@@ -283,6 +292,7 @@ namespace ve {
 			return false;
 		}
 		if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS && mode == 2) {
+			cat->addChild(pCamera);
 			initLevel(true);
 			return false;
 		}
@@ -325,23 +335,48 @@ namespace ve {
 
 	void PacEventListener::onFrameStarted(veEvent event) {
 		switch (mode) {
+		case -2:
+			getEnginePointer()->m_irrklangEngine->play2D("media/sounds/pacmaze/game_start.wav", false);
+			mode = 1;
+			return;
+		case -1:
+			if (getEnginePointer()->m_irrklangEngine->isCurrentlyPlaying("media/sounds/pacmaze/game_start.wav")) {
+				while (getEnginePointer()->m_irrklangEngine->isCurrentlyPlaying("media/sounds/pacmaze/game_start.wav")) {}
+				getEnginePointer()->m_irrklangEngine->play2D("media/sounds/pacmaze/death_2.wav", true);
+			}
+			return;
 		case 0: break;
 		case 1:
 			if (!getEnginePointer()->m_irrklangEngine->isCurrentlyPlaying("media/sounds/pacmaze/game_start.wav"))
 			{
-				std::string name = "media/sounds/pacmaze/siren_" + std::to_string(level) + ".wav";
+				pCamera->setTransform(glm::rotate((float)M_PI / 6, glm::vec3(1.0f, 0.0f, 0.0f)));
+				pCamera->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 7.0f, -8.0f)));
+				std::string name = "media/sounds/pacmaze/siren_" + std::to_string(std::min(level, 5)) + ".wav";
 				char char_array[33];
 				strcpy(char_array, name.c_str());
 				getEnginePointer()->m_irrklangEngine->play2D(char_array, true);
 				mode = 0;
 			}
+			else 
+			{
+				if (cameraAngle < 2 * M_PI) {
+					cameraAngle = cameraAngle + event.dt * 1.5;
+					pCamera->multiplyTransform(glm::rotate((float)(event.dt * 1.5), glm::vec3(0.0, 1.0, 0.0)));
+				}
+				else {
+					pCamera->setTransform(glm::rotate((float)M_PI / 6, glm::vec3(1.0f, 0.0f, 0.0f)));
+					pCamera->multiplyTransform(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 7.0f, -8.0f)));
+				}
+				
+			}
+			return;
 		default: return;
 		}
 		int i = 0;
 		int rage = 0;
 
 		if (rageTime > 0) {
-			rage = -1;
+			rage = 1;
 			if (rageTime < 3) {
 				rage = (int)(rageTime * 3) % 2;
 				if (!rage)
@@ -350,7 +385,7 @@ namespace ve {
 			rageTime -= event.dt;
 			if (rageTime <= 0) {
 				getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
-				std::string name = "media/sounds/pacmaze/siren_" + std::to_string(level) + ".wav";
+				std::string name = "media/sounds/pacmaze/siren_" + std::to_string(std::min(level, 5)) + ".wav";
 				char char_array[33];
 				strcpy(char_array, name.c_str());
 				getEnginePointer()->m_irrklangEngine->play2D(char_array, true);
@@ -462,7 +497,7 @@ namespace ve {
 
 				glm::vec3 catPos = cat->getPosition();
 
-				if (std::abs(catPos.x - curPos.x) < 15 && std::abs(catPos.z - curPos.z) < 15) {
+				if (std::abs(catPos.x - curPos.x) < 12 && std::abs(catPos.z - curPos.z) < 12) {
 					if (rageTime > 0) {
 						enDir[i] = M_PI;
 						headDir[i] = LEFT;
@@ -475,13 +510,13 @@ namespace ve {
 
 					}
 					else {
-						if (lives == 0) {
+						getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
+						getEnginePointer()->m_irrklangEngine->play2D("media/sounds/pacmaze/death_1.wav", false);
+						if (lives == 0) { // Game Over
 							mode = -1;
 						}
 						else {
 							lives--;
-							getEnginePointer()->m_irrklangEngine->removeAllSoundSources();
-							getEnginePointer()->m_irrklangEngine->play2D("media/sounds/pacmaze/death_1.wav", false);
 							initLevel(false);
 						}
 					}
@@ -563,6 +598,23 @@ namespace ve {
 				nk_label(ctx, outbuffer, NK_TEXT_CENTERED);
 			}
 			break;
+		case -1:
+			if (nk_begin(ctx, "", nk_rect(extent.width / 2 - 150, extent.height / 2 - 90, 300, 180), NK_WINDOW_BORDER)) {
+				nk_layout_row_dynamic(ctx, 45, 1);
+				nk_label(ctx, "Game Over", NK_TEXT_CENTERED);
+				char outbuffer[100];
+				nk_layout_row_dynamic(ctx, 45, 1);
+				sprintf(outbuffer, "Final Score: %d", pillScore + enemyScore);
+				nk_label(ctx, outbuffer, NK_TEXT_CENTERED);
+				
+				if (nk_button_label(ctx, "Restart")) {
+					lives = 2;
+					enemyScore = 0;
+					pillScore = 0;
+					level = 1;
+					initLevel(true);
+				}
+			}
 		}
 
 		nk_end(ctx);
