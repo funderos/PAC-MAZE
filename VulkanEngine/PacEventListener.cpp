@@ -464,9 +464,9 @@ namespace ve {
 			}
 
 			if (decision) {
-				if (i)
-					std::cout << i << ": " << curPos.x / 32.0f << ", " << curPos.y / 32.0f << ", "
-					<< curPos.z / 32.0f << ", " << enDir[i] << ", " << headDir[i] << std::endl;
+				//if (i)
+				//	std::cout << i << ": " << curPos.x / 32.0f << ", " << curPos.y / 32.0f << ", "
+				//	<< curPos.z / 32.0f << ", " << enDir[i] << ", " << headDir[i] << std::endl;
 				if (factor < 0)
 					factor = factor * -1;
 				if (factor == 0)
@@ -478,9 +478,9 @@ namespace ve {
 				case JUMP: curPos.x = curPos.x - 13 * 32 * sin(enDir[i]); headDir[i] = STRAIGHT; break;
 				}
 				enDir[i] = enDir[i] + factor * headDir[i] / 16;
-				if (i)
-					std::cout << i << ": " << curPos.x / 32.0f << ", " << curPos.y / 32.0f << ", "
-					<< curPos.z / 32.0f << ", " << enDir[i] << ", " << headDir[i] << std::endl;
+				//if (i)
+				//	std::cout << i << ": " << curPos.x / 32.0f << ", " << curPos.y / 32.0f << ", "
+				//	<< curPos.z / 32.0f << ", " << enDir[i] << ", " << headDir[i] << std::endl;
 
 			}
 
