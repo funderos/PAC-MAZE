@@ -1,5 +1,8 @@
 #include "VEInclude.h"
 #include "math.h"
+#include "future"
+#include "iostream"
+#pragma comment(lib, "Ws2_32.lib")
 
 namespace ve {
 
@@ -10,6 +13,14 @@ namespace ve {
 
 	const int pgWidth = 17;
 	const int pgHeight = 22;
+	int buttonDirection = 0;
+	int mode = 1;
+	unsigned int __stdcall receiveFrameOverUDP(void* socket);
+
+	int lives = 2;
+	int level = 1;
+	int pillScore;
+	int enemyScore;
 
 	enum playground { SPACE, WALL, TELEPORT, CAGE };
 	playground grid[pgWidth][pgHeight]
@@ -231,9 +242,11 @@ namespace ve {
 		}
 
 		mode = 2;
+
+		encodeStart();
 	}
 
-	void PacEventListener::initLevel(bool pillRestore) {
+	void initLevel(bool pillRestore) {
 
 		while (getEnginePointer()->m_irrklangEngine->isCurrentlyPlaying("media/sounds/pacmaze/death_1.wav")) {};
 		double angle = 0;
@@ -291,10 +304,22 @@ namespace ve {
 			buttonDirection = 1;
 			return false;
 		}
-		if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS && mode == 2) {
-			cat->addChild(pCamera);
-			initLevel(true);
-			return false;
+		if (event.idata1 == GLFW_KEY_SPACE && event.idata3 == GLFW_PRESS) {
+			if (mode == 2) {
+				cat->addChild(pCamera);
+				initLevel(true);
+				return false;
+			}
+
+			if (mode == -1) {
+				lives = 2;
+				enemyScore = 0;
+				pillScore = 0;
+				level = 1;
+				initLevel(true);
+				return false;
+			}
+
 		}
 	}
 
@@ -564,6 +589,49 @@ namespace ve {
 		}
 	}
 
+	void PacEventListener::onFrameEnded(veEvent event) {
+		timeCache += event.dt;
+
+		if (timeCache < 1.0f / 30.0f) { //ensure framerate is under 30fps
+			return;
+		}
+
+		timeCache = 0;
+		framenumber++;
+
+		VkExtent2D extent = getWindowPointer()->getExtent();
+		uint32_t imageSize = extent.width * extent.height * 4;
+		VkImage image = getRendererPointer()->getSwapChainImage();
+
+		uint8_t* dataImage = new uint8_t[imageSize];
+
+		vh::vhBufCopySwapChainImageToHost(getRendererPointer()->getDevice(),
+			getRendererPointer()->getVmaAllocator(),
+			getRendererPointer()->getGraphicsQueue(),
+			getRendererPointer()->getCommandPool(),
+			image, VK_FORMAT_R8G8B8A8_UNORM,
+			VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			dataImage, extent.width, extent.height, imageSize);
+
+		ret = av_frame_make_writable(picture);
+		if (ret < 0) {
+			fprintf(stderr, "Cannot make frame writeable\n");
+			exit(1);
+		}
+
+		uint8_t* inData[1] = { dataImage };
+		int      inLinesize[1] = { 4 * c->width };
+		sws_scale(ctx, inData, inLinesize, 0, c->height,
+			picture->data, picture->linesize);
+
+		//picture->pts = framenumber++;
+
+		// encode the image
+		encode(c, picture, pkt);
+
+		delete[] dataImage;
+	}
+
 	void PacEventListener::onDrawOverlay(veEvent event) {
 		VESubrenderFW_Nuklear* pSubrender = (VESubrenderFW_Nuklear*)getRendererPointer()->getOverlay();
 		if (pSubrender == nullptr) return;
@@ -599,14 +667,16 @@ namespace ve {
 			}
 			break;
 		case -1:
-			if (nk_begin(ctx, "", nk_rect(extent.width / 2 - 150, extent.height / 2 - 90, 300, 180), NK_WINDOW_BORDER)) {
-				nk_layout_row_dynamic(ctx, 45, 1);
+			if (nk_begin(ctx, "", nk_rect(extent.width / 2 - 150, extent.height / 2 - 110, 300, 220), NK_WINDOW_BORDER)) {
+				nk_layout_row_dynamic(ctx, 60, 1);
 				nk_label(ctx, "Game Over", NK_TEXT_CENTERED);
 				char outbuffer[100];
-				nk_layout_row_dynamic(ctx, 45, 1);
 				sprintf(outbuffer, "Final Score: %d", pillScore + enemyScore);
 				nk_label(ctx, outbuffer, NK_TEXT_CENTERED);
+				sprintf(outbuffer, "Press SPACE to restart!");
+				nk_label(ctx, outbuffer, NK_TEXT_CENTERED);
 				
+				/*
 				if (nk_button_label(ctx, "Restart")) {
 					lives = 2;
 					enemyScore = 0;
@@ -614,6 +684,7 @@ namespace ve {
 					level = 1;
 					initLevel(true);
 				}
+				*/
 			}
 		}
 
@@ -889,5 +960,284 @@ namespace ve {
 		default:
 			return 0;
 		}
+	}
+
+	// Network Config
+
+	struct Header {
+		unsigned long frameNumber;
+		unsigned long fragmentNumber;
+		unsigned long totalFragments;
+	};
+
+	void PacEventListener::encode(AVCodecContext* enc_ctx, AVFrame* frame, AVPacket* pkt)
+	{
+		// send the frame to the encoder */
+		ret = avcodec_send_frame(enc_ctx, frame);
+		if (ret < 0) {
+			fprintf(stderr, "error sending a frame for encoding\n");
+			exit(1);
+		}
+
+		while (ret >= 0) {
+			int ret = avcodec_receive_packet(enc_ctx, pkt);
+			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+				return;
+			else if (ret < 0) {
+				fprintf(stderr, "error during encoding\n");
+				exit(1);
+			}
+			sendFrameOverUDP((char*)pkt->data, pkt->size);
+			// fwrite(pkt->data, 1, pkt->size, outfile);
+			av_packet_unref(pkt);
+		}
+	};
+
+	unsigned int __stdcall receiveFrameOverUDP(void* socket) {
+		SOCKET* client = (SOCKET*)socket;
+		SOCKET Client = *client;
+		long rc;
+		enum Command { SPACE, ESC, LEFT, RIGHT, RELEASED, OTHER };
+		Command rcCommand;
+
+		while (rc != SOCKET_ERROR)
+		{
+			rc = recv(Client, (char*)&rcCommand, sizeof(rcCommand), 0);
+			if (rc == 0)
+			{
+				printf("Server hat die Verbindung getrennt..\n");
+				break;
+			}
+			if (rc == SOCKET_ERROR)
+			{
+				printf("Fehler: recv, fehler code: %d\n", WSAGetLastError());
+				break;
+			}
+
+			switch (rcCommand) {
+			case ESC: getEnginePointer()->end(); break;
+			case RELEASED: buttonDirection = 0; break;
+			case LEFT: buttonDirection = -1; break;
+			case RIGHT: buttonDirection = 1; break;
+			case SPACE:
+				if (mode == 2) {
+					cat->addChild(pCamera);
+					initLevel(true);
+					break;
+				}
+
+				if (mode == -1) {
+					lives = 2;
+					enemyScore = 0;
+					pillScore = 0;
+					level = 1;
+					initLevel(true);
+					break;
+				}
+			default: break;
+			}
+		}
+		return 0;
+	}
+
+	void PacEventListener::sendFrameOverUDP(char* data, int size) {
+		long rc;
+		const int maxSize = 1400;
+		char sendbuffer[65000];
+
+		//printf("Sending frame %4d (size=%5d)\n", framenumber, size);
+
+		Header header;
+		header.frameNumber = framenumber;
+		header.fragmentNumber = 1;
+		header.totalFragments = size / maxSize + int(size % maxSize > 0);
+
+		rc = 0;
+		int bytes = 0;
+		for (int i = 0; i < header.totalFragments; i++) {
+			memcpy(sendbuffer, &header, sizeof(header));
+			memcpy(sendbuffer + sizeof(header), data + bytes, std::min(maxSize, size - bytes));
+
+			rc = sendto(udp_sock, sendbuffer, std::min(maxSize, size - bytes) + sizeof(header), 0, (SOCKADDR*)&udp_addr, sizeof(SOCKADDR_IN));
+
+			if (rc == SOCKET_ERROR) {
+				printf("Send UDP Fragment Error, Code: %d\n", WSAGetLastError());
+				exit(1);
+			}
+			else {
+				rc = rc - sizeof(header);
+			}
+			bytes += rc;
+			header.fragmentNumber++;
+		}
+	}
+
+
+	void PacEventListener::encodeStart() {
+		avcodec_register_all();
+		framenumber = 0;
+
+		const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
+		if (!codec) {
+			fprintf(stderr, "codec not found\n");
+			exit(1);
+		}
+
+		c = avcodec_alloc_context3(codec);
+
+		picture = av_frame_alloc();
+
+		pkt = av_packet_alloc();
+		if (!pkt) {
+			fprintf(stderr, "Cannot alloc packet\n");
+			exit(1);
+		}
+
+		c->bit_rate = 1000000;
+
+		// resolution must be a multiple of two
+
+		VkExtent2D extent = getEnginePointer()->getWindow()->getExtent();
+
+		c->width = extent.width;
+		c->height = extent.height;
+		// frames per second
+		c->time_base.num = 1;
+		c->time_base.den = 25;
+		c->framerate.num = 25;
+		c->framerate.den = 1;
+
+		c->gop_size = 10; // emit one intra frame every ten frames
+		c->max_b_frames = 1;
+		c->pix_fmt = AV_PIX_FMT_YUV420P;
+
+		// open it
+		if (avcodec_open2(c, codec, NULL) < 0) {
+			fprintf(stderr, "could not open codec\n");
+			exit(1);
+		}
+
+		// Init UDP Sender
+		initUDP();
+
+		picture->format = c->pix_fmt;
+		picture->width = c->width;
+		picture->height = c->height;
+
+		ctx = sws_getContext(c->width, c->height,
+			AV_PIX_FMT_RGBA,
+			c->width, c->height,
+			AV_PIX_FMT_YUV420P,
+			0, 0, 0, 0);
+
+		int ret = av_frame_get_buffer(picture, 32);
+		if (ret < 0) {
+			fprintf(stderr, "could not alloc the frame data\n");
+			exit(1);
+		}
+
+		// receive control inputs from client in seperate thread
+		_beginthreadex(0, 0, receiveFrameOverUDP, (void*)&tcp_connectedSocket, 0, 0);
+	}
+
+	void PacEventListener::initUDP() {
+		WSADATA wsa;
+		long rc;
+		int remoteAddrLen = sizeof(SOCKADDR_IN);
+		rc = WSAStartup(MAKEWORD(2, 0), &wsa);
+		if (rc != 0)
+		{
+			fprintf(stderr, "Error: Winsock init failed (Error Code: %d)\n", WSAGetLastError());
+			exit(1);
+		}
+		else
+		{
+			printf("Winsock started!\n");
+		}
+
+		// Create UDP Socket
+		udp_sock = socket(AF_INET, SOCK_DGRAM, 0);
+		if (udp_sock == INVALID_SOCKET)
+		{
+			fprintf(stderr, "Error: UDP Socket creation failed (Error Code: %d)\n", WSAGetLastError());
+			exit(1);
+		}
+		else
+		{
+			printf("UDP Socket created!\n");
+		}
+
+		udp_addr.sin_family = AF_INET;
+		udp_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+		udp_addr.sin_port = htons(1234);
+
+		// Create TCP Socket, bind, listen and wait to accept connection
+		tcp_acceptSocket = socket(AF_INET, SOCK_STREAM, 0);
+		if (tcp_acceptSocket == INVALID_SOCKET)
+		{
+			printf("Error: TCP Socket creation failed (Error Code: %d)\n", WSAGetLastError());
+			exit(1);
+		}
+		else
+		{
+			printf("TCP Socket created!\n");
+		}
+
+		memset(&tcp_addr, 0, sizeof(SOCKADDR_IN));
+		tcp_addr.sin_family = AF_INET;
+		tcp_addr.sin_port = htons(12345);
+		tcp_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+		rc = bind(tcp_acceptSocket, (SOCKADDR*)&tcp_addr, sizeof(SOCKADDR_IN));
+		if (rc == SOCKET_ERROR)
+		{
+			printf("Error: Binding TCP Socket failed  (Error Code: %d)\n", WSAGetLastError());
+			exit(1);
+		}
+		else
+		{
+			printf("TCP Socket bound to Port 12345!\n");
+		}
+
+		rc = listen(tcp_acceptSocket, 10);
+		if (rc == SOCKET_ERROR)
+		{
+			printf("Error: Listening on TCP Socket failed (Error Code: %d)\n", WSAGetLastError());
+			exit(1);
+		}
+		else
+		{
+			printf("TCP Socket is listening now...\n");
+		}
+
+		tcp_connectedSocket = accept(tcp_acceptSocket, NULL, NULL);
+		if (tcp_connectedSocket == INVALID_SOCKET)
+		{
+			printf("Error: Accepting connection on TCP Socket (Error Code: %d)\n", WSAGetLastError());
+			exit(1);
+		}
+		else
+		{
+			printf("New connection on TCP Port accepted!\n");
+		}
+	}
+
+	PacEventListener::~PacEventListener() {
+		// uint8_t endcode[] = { 0, 0, 1, 0xb7 };
+
+		// flush the encoder
+		encode(c, NULL, pkt);
+
+		// add sequence end code to have a real MPEG file
+		//fwrite(endcode, 1, sizeof(endcode), outfile);
+		// fclose(outfile);
+
+		avcodec_free_context(&c);
+		av_frame_free(&picture);
+		av_packet_free(&pkt);
+
+		closesocket(tcp_acceptSocket);
+		closesocket(tcp_connectedSocket);
+		closesocket(udp_sock);
+		udp_sock = 0;
 	}
 };

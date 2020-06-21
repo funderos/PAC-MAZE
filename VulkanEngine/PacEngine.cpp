@@ -7,8 +7,6 @@ namespace ve {
 		registerEventListener(new PacEventListener("PacListener"));
 	};
 
-
-
 	///Load the first level into the game engine
 	///The engine uses Y-UP, Left-handed
 	void PacEngine::loadLevel(uint32_t numLevel) {
